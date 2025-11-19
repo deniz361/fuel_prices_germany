@@ -3,7 +3,9 @@ import re
 import json
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Info():
     def __init__(self):
@@ -23,7 +25,8 @@ class Info():
         
         self.offsets = {
             "Heute": 0,
-            "Gestern": -1
+            "Gestern": -1,
+            "Vorhestern": -2
         }
         
     def convert_timestamp(self, time):
@@ -58,8 +61,12 @@ class Info():
             section["price"] = float(raw["price"].replace(",", "."))
             section["fuelType"] = raw["fuelType"]
             
+            try:
+                last_updated = self.convert_timestamp(raw["fuelTypeUpdatedAt"])
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp '{raw['fuelTypeUpdatedAt']}': {e}")
+                last_updated = None
                 
-            last_updated = self.convert_timestamp(raw["fuelTypeUpdatedAt"])
             section["updatedAt"] = last_updated
             section["street"] = raw["street"]
             section["zipcode"] = raw["zipcode"]
