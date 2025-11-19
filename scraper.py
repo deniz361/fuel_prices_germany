@@ -41,9 +41,10 @@ class Info():
             month=base_date.month,
             day=base_date.day,
             hour=time_obj.hour,
-            minute=time_obj.minute,
+            minute=time_obj.minute
         )
-        return merged.isoformat()
+        return int(merged.timestamp())
+
         
     def format_data(self, json_data):
         json_list = []
@@ -56,7 +57,10 @@ class Info():
             section["global_id"] = int(raw["id"])
             section["price"] = float(raw["price"].replace(",", "."))
             section["fuelType"] = raw["fuelType"]
-            section["updatedAt"] = raw["fuelTypeUpdatedAt"]
+            
+                
+            last_updated = self.convert_timestamp(raw["fuelTypeUpdatedAt"])
+            section["updatedAt"] = last_updated
             section["street"] = raw["street"]
             section["zipcode"] = raw["zipcode"]
             section["city"] = raw["city"]
