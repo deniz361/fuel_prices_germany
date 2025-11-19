@@ -1,9 +1,8 @@
 import requests
-import brotli
 import re
 import json
 from bs4 import BeautifulSoup
-
+from datetime import datetime, timedelta
 
 
 class Info():
@@ -22,7 +21,58 @@ class Info():
             "Priority": "u=0, i",
         }
         
-    def get_fuelstations(self, distance, lat, lon, fuel_type, sort):
+        self.offsets = {
+            "Heute": 0,
+            "Gestern": -1
+        }
+        
+    def convert_timestamp(self, time):
+        ts = time.strip()
+        if "," in ts:
+            head, time_str = [x.strip() for x in ts.split(",", 1)]
+
+        if head in self.offsets and time_str:
+            offset = self.offsets[head]
+        base_date = datetime.now() + timedelta(days=offset)
+        time_obj = datetime.strptime(time_str, "%H:%M")
+
+        merged = datetime(
+            year=base_date.year,
+            month=base_date.month,
+            day=base_date.day,
+            hour=time_obj.hour,
+            minute=time_obj.minute,
+        )
+        return merged.isoformat()
+        
+    def format_data(self, json_data):
+        json_list = []
+        
+        for entry in json_data:
+            
+            section = {}
+            raw = json_data[entry]
+            
+            section["global_id"] = int(raw["id"])
+            section["price"] = float(raw["price"].replace(",", "."))
+            section["fuelType"] = raw["fuelType"]
+            section["updatedAt"] = raw["fuelTypeUpdatedAt"]
+            section["street"] = raw["street"]
+            section["zipcode"] = raw["zipcode"]
+            section["city"] = raw["city"]
+            section["operator"] = raw["operator"]
+            section["lat"] = raw["lat"]
+            section["lon"] = raw["lon"]
+            section["timeUntilClosing"] = raw["timeUntilClosing"]
+            
+            json_list.append(section)
+            
+        json_object = {} 
+        json_object["data"] = json_list
+        
+        return json_object
+        
+    def get_fuelstations(self, lat, lon, distance, fuel_type, sort):
         params = {
             "distance": distance,
             "lat": lat,
@@ -30,17 +80,12 @@ class Info():
             "fuelType": fuel_type,
             "sort": sort
         }
-
-        response = requests.get(self.url, params=params, headers=self.headers)
-
-        if response.headers.get("Content-Encoding") == "br":
-            html = brotli.decompress(response.content).decode("utf-8")
-        else:
-            html = response.text
-
-
+        
+        response = requests.get(self.url, headers=self.headers, params=params)
+        response.encoding = response.apparent_encoding or "utf-8"
+        html = response.text
         soup = BeautifulSoup(html, "html.parser")
-
+        
         # Find ALL <script> tags
         scripts = soup.find_all("script")
 
@@ -60,6 +105,12 @@ class Info():
                 
                 data = json.loads(raw)
                 
+                # stations_raw = {}
+                
+                # for k, v in data.items():
+                #     if k.startswith("FuelStations:"):
+                #         stations_raw[k] = v
+                        
                 # Nur FuelStation-Einträge rausfiltern
                 stations_raw = {
                     k: v
@@ -70,18 +121,8 @@ class Info():
                 json_data = stations_raw
 
         if not json_data:
-            raise Exception("Could not find JSON with FuelStation data.")
+            raise Exception("Make sure the coordinates are in Germany or increase the distance.")
 
-
-        print("Found", len(json_data), "stations")
-
-        # Print each result cleanly
-        # for station_id, info in json_data.items():
-        #     print(station_id, info)
+        formatted_data = self.format_data(json_data)
             
-        return json_data
-    
-if __name__ == "__main__":
-    info = Info()
-    
-    info.get_fuelstations(10, "50.94280233052442", "6.941247823375725", "Super", "PRICE_ASC")
+        return formatted_data
