@@ -43,8 +43,8 @@ async def validation_exception_handler(request, exc):
 
 @app.get("/stations", response_model=Dict[str, Station])
 def get_stations(
-    lat: str = Query(description="Latitude"),
-    lon: str = Query(description="Longitude"),
+    lat: float = Query(description="Latitude"),
+    lon: float = Query(description="Longitude"),
     distance: int = Query(10, description="Search radius in km"),
     fuelType: str = Query("Super", description="Fuel type, e.g. 'Super', 'Super E10', 'Diesel'"),
     sort: str = Query("PRICE_ASC", description="Sort the data, e.g. 'PRICE_ASC', 'PRICE_DESC'")

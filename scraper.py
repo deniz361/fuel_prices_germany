@@ -57,7 +57,7 @@ class Info():
             section = {}
             raw = json_data[entry]
             
-            section["global_id"] = int(raw["id"])
+            section["id"] = int(raw["id"])
             section["price"] = float(raw["price"].replace(",", "."))
             section["fuelType"] = raw["fuelType"]
             
